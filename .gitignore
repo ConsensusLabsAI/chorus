@@ -138,3 +138,7 @@ dmypy.json
 # OS
 .DS_Store
 Thumbs.db
+
+test/
+tmp/
+.prompts/

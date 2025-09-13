@@ -1,3 +1,2 @@
-# Core dependencies
-httpx>=0.24.0
-pydantic>=2.0.0
+# Core dependencies for Chorus LLM Prompt Versioning
+# No external dependencies required - uses only Python standard library

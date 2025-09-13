@@ -8,3 +8,4 @@
 - [Semantic versioning](https://latitude-blog.ghost.io/blog/prompt-versioning-best-practices/)
 - prompt a/b testing
 - prompt history
+- ability to cross-compare multi-agent prompt output (somehow)

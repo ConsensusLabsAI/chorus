@@ -12,7 +12,7 @@ license = {text = "MIT"}
 authors = [
     {name = "Maya Lekhi", email = "maya@consensuslabs.ai"},
 ]
-keywords = ["python", "package", "llm", "prompt", "versioning"]
+keywords = ["python", "package", "llm", "prompt", "versioning", "semver", "langgraph"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -23,7 +23,12 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
+# No external dependencies - uses only Python standard library
+dependencies = []
 
 [project.scripts]
 chorus = "chorus.cli:main"
@@ -32,9 +37,27 @@ chorus = "chorus.cli:main"
 where = ["src"]
 include = ["chorus*"]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+lint = [
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]
+
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

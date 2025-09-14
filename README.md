@@ -18,3 +18,7 @@
 - Lilypad
 - Langsmith
 - AgentOps
+
+## Future considerations
+- moving to a prompt registry based system 
+- taking this further away from local

@@ -1,2 +1,0 @@
-# Core dependencies for Chorus LLM Prompt Versioning
-# No external dependencies required - uses only Python standard library

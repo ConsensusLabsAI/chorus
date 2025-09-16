@@ -1,16 +1,12 @@
 """
-Web server for Chorus prompt versioning tool.
-Serves the React client and provides API endpoints for prompt data.
+Simple web server for Chorus prompt versioning tool.
 """
 
 import json
-import os
-import socket
 import webbrowser
 from pathlib import Path
 from http.server import HTTPServer, SimpleHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
-from typing import Dict, Any
+from urllib.parse import urlparse
 import threading
 import time
 
@@ -23,63 +19,37 @@ class Colors:
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
     BLUE = '\033[94m'
-    MAGENTA = '\033[95m'
     CYAN = '\033[96m'
-    WHITE = '\033[97m'
     BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
     END = '\033[0m'
 
 
 class ChorusHTTPRequestHandler(SimpleHTTPRequestHandler):
-    """Custom HTTP handler that serves the React app and provides API endpoints."""
+    """Simple HTTP handler for the web interface."""
     
     def __init__(self, *args, **kwargs):
-        # Set the document root to the client build directory
-        self.client_path = Path(__file__).parent.parent.parent / "src" / "client"
-        self.dist_path = self.client_path / "dist"
-        super().__init__(*args, directory=str(self.dist_path), **kwargs)
+        web_path = Path(__file__).parent / "web"
+        super().__init__(*args, directory=str(web_path), **kwargs)
     
     def do_GET(self):
-        """Handle GET requests for both static files and API endpoints."""
+        """Handle GET requests."""
         parsed_path = urlparse(self.path)
         
-        # API endpoints
-        if parsed_path.path.startswith('/api/'):
-            self.handle_api_request(parsed_path)
+        if parsed_path.path == '/api/prompts':
+            self.handle_api_prompts()
+        elif parsed_path.path in ['/', '/index.html']:
+            self.path = '/index.html'
+            super().do_GET()
         else:
-            # Check if it's a static asset (JS, CSS, images, etc.)
-            if (parsed_path.path.startswith('/assets/') or 
-                parsed_path.path.endswith('.js') or 
-                parsed_path.path.endswith('.css') or 
-                parsed_path.path.endswith('.svg') or
-                parsed_path.path.endswith('.ico')):
-                # Serve static files normally
-                super().do_GET()
-            else:
-                # Serve React app for all other routes (SPA routing)
-                self.path = '/index.html'
-                super().do_GET()
+            super().do_GET()
     
-    def handle_api_request(self, parsed_path):
-        """Handle API requests for prompt data."""
-        try:
-            if parsed_path.path == '/api/prompts':
-                self.get_prompts()
-            elif parsed_path.path == '/api/prompts/stats':
-                self.get_prompts_stats()
-            else:
-                self.send_error(404, "API endpoint not found")
-        except Exception as e:
-            self.send_error(500, f"Internal server error: {str(e)}")
-    
-    def get_prompts(self):
-        """Get all prompts from storage."""
+    def handle_api_prompts(self):
+        """Handle /api/prompts endpoint."""
         try:
             storage = PromptStorage()
             prompts = storage.list_prompts()
             
-            # Convert to dictionary format for JSON response
+            # Convert to dictionary format
             prompts_data = {}
             for prompt in prompts:
                 key = f"{prompt.function_name}_{prompt.version}"
@@ -89,140 +59,67 @@ class ChorusHTTPRequestHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_error(500, f"Error loading prompts: {str(e)}")
     
-    def get_prompts_stats(self):
-        """Get statistics about stored prompts."""
-        try:
-            storage = PromptStorage()
-            all_prompts = storage.list_prompts()
-            
-            # Group by function name
-            by_function = {}
-            for prompt in all_prompts:
-                func_name = prompt.function_name
-                if func_name not in by_function:
-                    by_function[func_name] = []
-                by_function[func_name].append(prompt)
-            
-            stats = {
-                'total_prompts': len(all_prompts),
-                'total_functions': len(by_function),
-                'functions': {
-                    func_name: {
-                        'count': len(prompts),
-                        'latest_version': max(prompts, key=lambda x: x.version).version,
-                        'tags': list(set(tag for p in prompts for tag in p.tags))
-                    }
-                    for func_name, prompts in by_function.items()
-                }
-            }
-            
-            self.send_json_response(stats)
-        except Exception as e:
-            self.send_error(500, f"Error loading stats: {str(e)}")
-    
-    def send_json_response(self, data: Dict[str, Any]):
-        """Send JSON response with proper headers."""
+    def send_json_response(self, data):
+        """Send JSON response."""
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
         
         json_data = json.dumps(data, indent=2)
         self.wfile.write(json_data.encode('utf-8'))
     
     def log_message(self, format, *args):
-        """Override to reduce log noise."""
+        """Suppress log messages."""
         pass
 
 
-def find_available_port(start_port: int = 3000, max_attempts: int = 10) -> int:
-    """Find an available port starting from start_port."""
-    for port in range(start_port, start_port + max_attempts):
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('', port))
-                return port
-        except OSError:
-            continue
-    raise RuntimeError(f"Could not find an available port after {max_attempts} attempts")
-
-
-def start_web_server(port: int = 3000, open_browser: bool = True):
-    """Start the web server and optionally open the browser."""
-    # Check if client is built
-    client_path = Path(__file__).parent.parent.parent / "src" / "client"
-    build_path = client_path / "dist"
+def start_web_server(port=3000, open_browser=True):
+    """Start the web server."""
+    web_path = Path(__file__).parent / "web"
+    index_file = web_path / "index.html"
     
-    if not build_path.exists():
-        print(f"{Colors.RED}Client not built. Building React app...{Colors.END}")
-        build_react_app(client_path)
-    
-    # Find available port
-    try:
-        actual_port = find_available_port(port)
-        if actual_port != port:
-            print(f"{Colors.YELLOW}Warning: Port {port} is in use, using port {actual_port} instead{Colors.END}")
-    except RuntimeError as e:
-        print(f"{Colors.RED}Error: {e}{Colors.END}")
+    if not index_file.exists():
+        print(f"{Colors.RED}Web interface not found at {web_path}{Colors.END}")
         return
     
-    # Start server
-    server_address = ('', actual_port)
-    httpd = HTTPServer(server_address, ChorusHTTPRequestHandler)
+    # Find available port
+    for test_port in range(port, port + 10):
+        try:
+            server_address = ('', test_port)
+            httpd = HTTPServer(server_address, ChorusHTTPRequestHandler)
+            break
+        except OSError:
+            continue
+    else:
+        print(f"{Colors.RED}Could not find an available port{Colors.END}")
+        return
     
-    print(f"{Colors.GREEN}{Colors.BOLD}Chorus web server starting on http://localhost:{actual_port}{Colors.END}")
-    print(f"{Colors.CYAN}Serving from: {client_path}{Colors.END}")
-    print(f"{Colors.WHITE}Press Ctrl+C to stop the server{Colors.END}")
+    if test_port != port:
+        print(f"{Colors.YELLOW}Port {port} in use, using port {test_port}{Colors.END}")
     
-    # Open browser in a separate thread
+    print(f"{Colors.GREEN}{Colors.BOLD}Chorus web server: http://localhost:{test_port}{Colors.END}")
+    print(f"{Colors.CYAN}Press Ctrl+C to stop{Colors.END}")
+    
+    # Open browser
     if open_browser:
         def open_browser_delayed():
-            time.sleep(1)  # Give server time to start
-            webbrowser.open(f'http://localhost:{actual_port}')
+            time.sleep(1)
+            webbrowser.open(f'http://localhost:{test_port}')
         
-        browser_thread = threading.Thread(target=open_browser_delayed)
-        browser_thread.daemon = True
-        browser_thread.start()
+        threading.Thread(target=open_browser_delayed, daemon=True).start()
     
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print(f"\n{Colors.YELLOW}Shutting down server...{Colors.END}")
+        print(f"\n{Colors.YELLOW}Shutting down...{Colors.END}")
         httpd.shutdown()
-
-
-def build_react_app(client_path: Path):
-    """Build the React app for production."""
-    import subprocess
-    import sys
-    
-    try:
-        print(f"{Colors.BLUE}Installing dependencies...{Colors.END}")
-        subprocess.run([sys.executable, "-m", "npm", "install"], 
-                      cwd=client_path, check=True, capture_output=True)
-        
-        print(f"{Colors.BLUE}Building React app...{Colors.END}")
-        subprocess.run([sys.executable, "-m", "npm", "run", "build"], 
-                      cwd=client_path, check=True, capture_output=True)
-        
-        print(f"{Colors.GREEN}React app built successfully!{Colors.END}")
-    except subprocess.CalledProcessError as e:
-        print(f"{Colors.RED}Error building React app: {e}{Colors.END}")
-        print(f"{Colors.YELLOW}Make sure Node.js and npm are installed{Colors.END}")
-        raise
-    except FileNotFoundError:
-        print(f"{Colors.RED}npm not found. Please install Node.js and npm{Colors.END}")
-        raise
 
 
 if __name__ == "__main__":
     import argparse
-    
     parser = argparse.ArgumentParser(description="Start Chorus web server")
     parser.add_argument("--port", type=int, default=3000, help="Port to run server on")
-    parser.add_argument("--no-browser", action="store_true", help="Don't open browser automatically")
-    
+    parser.add_argument("--no-browser", action="store_true", help="Don't open browser")
     args = parser.parse_args()
     start_web_server(port=args.port, open_browser=not args.no_browser)

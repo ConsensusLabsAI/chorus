@@ -100,37 +100,103 @@ body {
   min-height: calc(100vh - 300px);
 }
 
-.prompt-list {
+.project-list {
   flex: 1;
   padding: 2rem;
   overflow-y: auto;
 }
 
-.prompt-detail {
-  width: 400px;
+.project-detail {
+  width: 500px;
   background: white;
   border-left: 1px solid #e9ecef;
   overflow-y: auto;
 }
 
-/* Function Groups */
-.function-group {
-  margin-bottom: 2rem;
+/* Project Grid */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
 }
 
-.function-name {
+/* Project Cards */
+.project-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.project-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: #667eea;
+}
+
+.project-card.selected {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.project-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.project-name {
   color: #333;
   font-size: 1.5rem;
   font-weight: 600;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e9ecef;
 }
 
-.prompt-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+.project-version {
+  background: #667eea;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.project-stats {
+  display: flex;
   gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.project-stat {
+  text-align: center;
+}
+
+.project-stat-value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.project-stat-label {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.project-description {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+}
+
+.project-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 /* Prompt Cards */
@@ -220,7 +286,7 @@ body {
   text-align: right;
 }
 
-/* Detail Panel */
+/* Project Detail Panel */
 .detail-header {
   display: flex;
   justify-content: space-between;
@@ -252,6 +318,87 @@ body {
 
 .detail-content {
   padding: 1.5rem;
+}
+
+.project-stats {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+}
+
+.agents-section h4 {
+  color: #333;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.agents-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.agent-item {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.agent-item:hover {
+  background: #e9ecef;
+  border-color: #667eea;
+}
+
+.agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.agent-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.agent-version {
+  background: #667eea;
+  color: white;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.agent-description {
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .detail-section {

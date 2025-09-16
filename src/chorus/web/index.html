@@ -15,10 +15,7 @@
 
         <div class="controls">
             <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search prompts, functions, or descriptions..." class="search-input">
-            </div>
-            <div class="filter-box">
-                <input type="text" id="filterInput" placeholder="Filter by function name..." class="filter-input">
+                <input type="text" id="searchInput" placeholder="Search projects..." class="search-input">
             </div>
         </div>
 
@@ -38,44 +35,42 @@
         </div>
 
         <div class="content">
-            <div class="prompt-list">
+            <div class="project-list">
                 <div id="loadingState" class="loading">
                     <div class="spinner"></div>
-                    <p>Loading prompts...</p>
+                    <p>Loading projects...</p>
                 </div>
                 <div id="errorState" class="error" style="display: none;">
-                    <h2>Error loading prompts</h2>
+                    <h2>Error loading projects</h2>
                     <p id="errorMessage"></p>
                     <button onclick="fetchPrompts()" class="retry-btn">Try Again</button>
                 </div>
                 <div id="emptyState" class="empty-state" style="display: none;">
-                    <h3>No prompts found</h3>
-                    <p>Try adjusting your search or filter criteria</p>
+                    <h3>No projects found</h3>
+                    <p>No prompts with assigned projects found</p>
                 </div>
-                <div id="promptGroups"></div>
+                <div id="projectGrid"></div>
             </div>
 
-            <div id="promptDetail" class="prompt-detail" style="display: none;">
+            <div id="projectDetail" class="project-detail" style="display: none;">
                 <div class="detail-header">
-                    <h3 id="detailTitle"></h3>
-                    <button onclick="closeDetail()" class="close-btn">×</button>
+                    <h3 id="projectTitle"></h3>
+                    <button onclick="closeProjectDetail()" class="close-btn">×</button>
                 </div>
                 <div class="detail-content">
-                    <div class="detail-section">
-                        <h4>Description</h4>
-                        <p id="detailDescription"></p>
+                    <div class="project-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Agents:</span>
+                            <span id="totalAgents" class="stat-value">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Latest Version:</span>
+                            <span id="latestVersion" class="stat-value">-</span>
+                        </div>
                     </div>
-                    <div class="detail-section">
-                        <h4>Tags</h4>
-                        <div id="detailTags" class="tags"></div>
-                    </div>
-                    <div class="detail-section">
-                        <h4>Prompt</h4>
-                        <pre id="detailPrompt" class="prompt-text"></pre>
-                    </div>
-                    <div class="detail-section">
-                        <h4>Metadata</h4>
-                        <div id="detailMetadata" class="metadata"></div>
+                    <div class="agents-section">
+                        <h4>Agents</h4>
+                        <div id="agentsList" class="agents-list"></div>
                     </div>
                 </div>
             </div>

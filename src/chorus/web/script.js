@@ -1,28 +1,26 @@
 // Global state
 let prompts = {};
-let filteredPrompts = [];
-let selectedPrompt = null;
+let projects = {};
+let selectedProject = null;
 
 // DOM elements
 const searchInput = document.getElementById('searchInput');
-const filterInput = document.getElementById('filterInput');
 const loadingState = document.getElementById('loadingState');
 const errorState = document.getElementById('errorState');
 const emptyState = document.getElementById('emptyState');
-const promptGroups = document.getElementById('promptGroups');
-const promptDetail = document.getElementById('promptDetail');
+const projectGrid = document.getElementById('projectGrid');
+const projectDetail = document.getElementById('projectDetail');
 
 // Stats elements
 const totalPromptsEl = document.getElementById('totalPrompts');
 const totalProjectsEl = document.getElementById('totalProjects');
 const filteredResultsEl = document.getElementById('filteredResults');
 
-// Detail elements
-const detailTitle = document.getElementById('detailTitle');
-const detailDescription = document.getElementById('detailDescription');
-const detailTags = document.getElementById('detailTags');
-const detailPrompt = document.getElementById('detailPrompt');
-const detailMetadata = document.getElementById('detailMetadata');
+// Project detail elements
+const projectTitle = document.getElementById('projectTitle');
+const totalAgents = document.getElementById('totalAgents');
+const latestVersion = document.getElementById('latestVersion');
+const agentsList = document.getElementById('agentsList');
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -31,8 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupEventListeners() {
-  searchInput.addEventListener('input', filterPrompts);
-  filterInput.addEventListener('input', filterPrompts);
+  searchInput.addEventListener('input', filterProjects);
 }
 
 async function fetchPrompts() {
@@ -61,7 +58,8 @@ async function fetchPrompts() {
     prompts = await response.json();
     console.log('Fetched prompts data:', prompts);
     
-    filterPrompts();
+    processProjects();
+    filterProjects();
     hideLoading();
   } catch (err) {
     console.error('Fetch error:', err);
@@ -69,11 +67,59 @@ async function fetchPrompts() {
   }
 }
 
+function processProjects() {
+  projects = {};
+  
+  // Group prompts by project
+  Object.values(prompts).forEach(prompt => {
+    // Only include prompts that have a project_version
+    if (!prompt.project_version) {
+      return; // Skip prompts without project assignment
+    }
+    
+    const projectKey = prompt.project_version;
+    
+    if (!projects[projectKey]) {
+      projects[projectKey] = {
+        version: prompt.project_version,
+        agents: [],
+        totalAgents: 0,
+        latestAgentVersion: 0,
+        allTags: new Set(),
+        allDescriptions: []
+      };
+    }
+    
+    // Add agent to project
+    projects[projectKey].agents.push(prompt);
+    projects[projectKey].totalAgents++;
+    projects[projectKey].latestAgentVersion = Math.max(
+      projects[projectKey].latestAgentVersion, 
+      prompt.agent_version || 0
+    );
+    
+    // Collect tags and descriptions
+    if (prompt.tags) {
+      prompt.tags.forEach(tag => projects[projectKey].allTags.add(tag));
+    }
+    if (prompt.description) {
+      projects[projectKey].allDescriptions.push(prompt.description);
+    }
+  });
+  
+  // Convert Set to Array for tags
+  Object.values(projects).forEach(project => {
+    project.allTags = Array.from(project.allTags);
+  });
+  
+  console.log('Processed projects:', projects);
+}
+
 function showLoading() {
   loadingState.style.display = 'flex';
   errorState.style.display = 'none';
   emptyState.style.display = 'none';
-  promptGroups.style.display = 'none';
+  projectGrid.style.display = 'none';
 }
 
 function hideLoading() {
@@ -84,7 +130,7 @@ function showError(message) {
   loadingState.style.display = 'none';
   errorState.style.display = 'flex';
   emptyState.style.display = 'none';
-  promptGroups.style.display = 'none';
+  projectGrid.style.display = 'none';
   document.getElementById('errorMessage').textContent = message;
 }
 
@@ -92,47 +138,35 @@ function showEmpty() {
   loadingState.style.display = 'none';
   errorState.style.display = 'none';
   emptyState.style.display = 'block';
-  promptGroups.style.display = 'none';
+  projectGrid.style.display = 'none';
 }
 
-function filterPrompts() {
+function filterProjects() {
   const searchTerm = searchInput.value.toLowerCase();
-  const filterTerm = filterInput.value.toLowerCase();
   
-  filteredPrompts = Object.values(prompts).filter(prompt => {
-    const matchesSearch = prompt.prompt.toLowerCase().includes(searchTerm) ||
-                         prompt.function_name.toLowerCase().includes(searchTerm) ||
-                         (prompt.description || '').toLowerCase().includes(searchTerm);
-    const matchesFilter = !filterTerm || prompt.function_name.toLowerCase().includes(filterTerm);
-    return matchesSearch && matchesFilter;
+  const filteredProjects = Object.entries(projects).filter(([projectKey, project]) => {
+    const matchesSearch = projectKey.toLowerCase().includes(searchTerm) ||
+                         project.allDescriptions.some(desc => desc.toLowerCase().includes(searchTerm)) ||
+                         project.allTags.some(tag => tag.toLowerCase().includes(searchTerm));
+    return matchesSearch;
   });
   
-  updateStats();
-  renderPrompts();
+  updateStats(filteredProjects);
+  renderProjects(filteredProjects);
 }
 
-function updateStats() {
-  totalPromptsEl.textContent = Object.keys(prompts).length;
+function updateStats(filteredProjects) {
+  const totalPromptsCount = Object.values(prompts).length;
+  const totalProjectsCount = Object.keys(projects).length;
+  const filteredCount = filteredProjects.length;
   
-  // Group by project
-  const projectGroups = {};
-  filteredPrompts.forEach(prompt => {
-    const projectName = prompt.function_name.replace(/_\d+$/, '');
-    const projectVersion = prompt.project_version || 'Unknown';
-    const projectKey = `${projectName} v${projectVersion}`;
-    
-    if (!projectGroups[projectKey]) {
-      projectGroups[projectKey] = [];
-    }
-    projectGroups[projectKey].push(prompt);
-  });
-  
-  totalProjectsEl.textContent = Object.keys(projectGroups).length;
-  filteredResultsEl.textContent = filteredPrompts.length;
+  totalPromptsEl.textContent = totalPromptsCount;
+  totalProjectsEl.textContent = totalProjectsCount;
+  filteredResultsEl.textContent = filteredCount;
 }
 
-function renderPrompts() {
-  if (filteredPrompts.length === 0) {
+function renderProjects(projectsToRender) {
+  if (projectsToRender.length === 0) {
     showEmpty();
     return;
   }
@@ -140,31 +174,12 @@ function renderPrompts() {
   loadingState.style.display = 'none';
   errorState.style.display = 'none';
   emptyState.style.display = 'none';
-  promptGroups.style.display = 'block';
+  projectGrid.style.display = 'grid';
   
-  // Group by project
-  const projectGroups = {};
-  filteredPrompts.forEach(prompt => {
-    const projectName = prompt.function_name.replace(/_\d+$/, '');
-    const projectVersion = prompt.project_version || 'Unknown';
-    const projectKey = `${projectName} v${projectVersion}`;
-    
-    if (!projectGroups[projectKey]) {
-      projectGroups[projectKey] = [];
-    }
-    projectGroups[projectKey].push(prompt);
-  });
-  
-  // Sort project groups by version
-  const sortedProjectKeys = Object.keys(projectGroups).sort((a, b) => {
-    const extractVersion = (key) => {
-      const match = key.match(/v(\d+\.\d+\.\d+)$/);
-      if (!match) return [0, 0, 0];
-      return match[1].split('.').map(Number);
-    };
-    
-    const aVersion = extractVersion(a);
-    const bVersion = extractVersion(b);
+  // Sort projects by version (newest first)
+  projectsToRender.sort(([aKey, aProject], [bKey, bProject]) => {
+    const aVersion = parseVersion(aProject.version);
+    const bVersion = parseVersion(bProject.version);
     
     for (let i = 0; i < 3; i++) {
       const aVal = aVersion[i] || 0;
@@ -174,94 +189,93 @@ function renderPrompts() {
     return 0;
   });
   
-  // Sort prompts within each project by agent version
-  sortedProjectKeys.forEach(projectKey => {
-    projectGroups[projectKey].sort((a, b) => {
-      const aAgentVersion = a.agent_version || 0;
-      const bAgentVersion = b.agent_version || 0;
-      return bAgentVersion - aAgentVersion;
-    });
-  });
-  
   // Render HTML
-  promptGroups.innerHTML = sortedProjectKeys.map(projectKey => {
-    const projectPrompts = projectGroups[projectKey];
+  projectGrid.innerHTML = projectsToRender.map(([projectKey, project]) => {
+    const description = project.allDescriptions[0] || 'No description available';
+    const tags = project.allTags.slice(0, 3); // Show first 3 tags
     
     return `
-      <div class="function-group">
-        <h2 class="function-name">${projectKey}</h2>
-        <div class="prompt-grid">
-          ${projectPrompts.map(prompt => `
-            <div class="prompt-card" onclick="selectPrompt('${prompt.function_name}_${prompt.version}')">
-              <div class="prompt-header">
-                <span class="version-badge">v${prompt.agent_version}</span>
-                <span class="function-name-badge">${prompt.function_name}</span>
-              </div>
-              <p class="description">${prompt.description || 'No description'}</p>
-              <div class="tags">
-                ${(prompt.tags || []).map(tag => `<span class="tag">${tag}</span>`).join('')}
-              </div>
-              <div class="prompt-preview">
-                ${prompt.prompt.length > 100 ? prompt.prompt.substring(0, 100) + '...' : prompt.prompt}
-              </div>
-              <div class="created-at">
-                ${new Date(prompt.created_at).toLocaleDateString()}
-              </div>
-            </div>
-          `).join('')}
+      <div class="project-card" onclick="selectProject('${projectKey}')">
+        <div class="project-header">
+          <div class="project-name">Project ${projectKey}</div>
+          <div class="project-version">v${project.version}</div>
+        </div>
+        <div class="project-stats">
+          <div class="project-stat">
+            <span class="project-stat-value">${project.totalAgents}</span>
+            <span class="project-stat-label">Agents</span>
+          </div>
+          <div class="project-stat">
+            <span class="project-stat-value">v${project.latestAgentVersion}</span>
+            <span class="project-stat-label">Latest</span>
+          </div>
+        </div>
+        <div class="project-description">${description}</div>
+        <div class="project-tags">
+          ${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
         </div>
       </div>
     `;
   }).join('');
 }
 
-function selectPrompt(promptKey) {
-  selectedPrompt = prompts[promptKey];
-  if (!selectedPrompt) return;
+function parseVersion(version) {
+  if (!version) return [0, 0, 0];
+  return version.split('.').map(Number).concat([0, 0, 0]).slice(0, 3);
+}
+
+function selectProject(projectKey) {
+  selectedProject = projects[projectKey];
+  if (!selectedProject) return;
   
-  // Update detail panel
-  detailTitle.textContent = `${selectedPrompt.function_name} v${selectedPrompt.agent_version}`;
-  detailDescription.textContent = selectedPrompt.description || 'No description provided';
+  // Update project detail panel
+  projectTitle.textContent = `Project ${projectKey}`;
+  totalAgents.textContent = selectedProject.totalAgents;
+  latestVersion.textContent = `v${selectedProject.latestAgentVersion}`;
   
-  // Update tags
-  if (selectedPrompt.tags && selectedPrompt.tags.length > 0) {
-    detailTags.innerHTML = selectedPrompt.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
-  } else {
-    detailTags.innerHTML = '<span class="no-tags">No tags</span>';
-  }
+  // Sort agents by version (newest first)
+  const sortedAgents = selectedProject.agents.sort((a, b) => {
+    const aVersion = a.agent_version || 0;
+    const bVersion = b.agent_version || 0;
+    return bVersion - aVersion;
+  });
   
-  // Update prompt
-  detailPrompt.textContent = selectedPrompt.prompt;
-  
-  // Update metadata
-  detailMetadata.innerHTML = `
-    <div class="meta-item">
-      <strong>Project Version:</strong> ${selectedPrompt.project_version}
+  // Render agents list
+  agentsList.innerHTML = sortedAgents.map(agent => `
+    <div class="agent-item" onclick="showAgentDetail('${agent.function_name}_${agent.version}')">
+      <div class="agent-header">
+        <span class="agent-name">${agent.function_name}</span>
+        <span class="agent-version">v${agent.agent_version}</span>
+      </div>
+      <div class="agent-description">${agent.description || 'No description'}</div>
     </div>
-    <div class="meta-item">
-      <strong>Agent Version:</strong> ${selectedPrompt.agent_version}
-    </div>
-    <div class="meta-item">
-      <strong>Created:</strong> ${new Date(selectedPrompt.created_at).toLocaleString()}
-    </div>
-  `;
+  `).join('');
   
-  // Show detail panel
-  promptDetail.style.display = 'block';
+  // Show project detail panel
+  projectDetail.style.display = 'block';
   
   // Update selected state
-  document.querySelectorAll('.prompt-card').forEach(card => {
+  document.querySelectorAll('.project-card').forEach(card => {
     card.classList.remove('selected');
   });
   event.currentTarget.classList.add('selected');
 }
 
-function closeDetail() {
-  promptDetail.style.display = 'none';
-  selectedPrompt = null;
+function showAgentDetail(agentKey) {
+  const agent = prompts[agentKey];
+  if (!agent) return;
+  
+  // For now, just show an alert with agent details
+  // You could expand this to show a modal or another detail view
+  alert(`Agent: ${agent.function_name}\nVersion: v${agent.agent_version}\nDescription: ${agent.description || 'No description'}\n\nPrompt:\n${agent.prompt.substring(0, 200)}...`);
+}
+
+function closeProjectDetail() {
+  projectDetail.style.display = 'none';
+  selectedProject = null;
   
   // Remove selected state
-  document.querySelectorAll('.prompt-card').forEach(card => {
+  document.querySelectorAll('.project-card').forEach(card => {
     card.classList.remove('selected');
   });
 }

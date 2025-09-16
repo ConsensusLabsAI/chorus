@@ -1,3 +1,6 @@
+/* DM Sans font */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+
 /* Reset and base styles */
 * {
   box-sizing: border-box;
@@ -6,7 +9,7 @@
 }
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
   line-height: 1.5;
   color: #333;
   background: #f8f9fa;

@@ -13,7 +13,7 @@ class PromptVersion:
     def __init__(
         self,
         prompt: str,
-        system_version: str,
+        project_version: str,
         agent_version: int,
         function_name: str,
         description: Optional[str] = None,
@@ -25,8 +25,8 @@ class PromptVersion:
         execution_id: Optional[str] = None
     ):
         self.prompt = prompt
-        self.system_version = system_version  # Semantic version for project/system
-        self.agent_version = agent_version    # Incremental version for prompt changes
+        self.project_version = project_version  # Semantic version for project
+        self.agent_version = agent_version      # Incremental version for prompt changes
         self.function_name = function_name
         self.description = description or ""
         self.tags = tags or []
@@ -42,13 +42,13 @@ class PromptVersion:
     @property
     def version(self) -> str:
         """Get the combined version string for backward compatibility."""
-        return f"{self.system_version}.{self.agent_version}"
+        return f"{self.project_version}.{self.agent_version}"
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for storage."""
         return {
             'prompt': self.prompt,
-            'system_version': self.system_version,
+            'project_version': self.project_version,
             'agent_version': self.agent_version,
             'function_name': self.function_name,
             'description': self.description,
@@ -65,16 +65,20 @@ class PromptVersion:
     def from_dict(cls, data: Dict[str, Any]) -> 'PromptVersion':
         """Create from dictionary."""
         # Handle backward compatibility for old version field
-        if 'version' in data and 'system_version' not in data:
-            system_version = data['version']
+        if 'version' in data and 'project_version' not in data and 'system_version' not in data:
+            project_version = data['version']
             agent_version = 1  # Default agent version for backward compatibility
+        elif 'system_version' in data:
+            # Handle old system_version field
+            project_version = data['system_version']
+            agent_version = data['agent_version']
         else:
-            system_version = data['system_version']
+            project_version = data['project_version']
             agent_version = data['agent_version']
         
         return cls(
             prompt=data['prompt'],
-            system_version=system_version,
+            project_version=project_version,
             agent_version=agent_version,
             function_name=data['function_name'],
             description=data.get('description'),

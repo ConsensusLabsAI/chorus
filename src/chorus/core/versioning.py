@@ -1,9 +1,59 @@
 """
-Semantic versioning utilities for prompt changes.
+Dual versioning utilities for prompt changes.
+- System version: Semantic versioning for project/system changes (set manually)
+- Agent version: Incremental version for prompt changes (auto-incremented)
 """
 
 import re
-from typing import Tuple
+from typing import Tuple, Optional
+
+
+def get_next_agent_version(current_agent_version: int) -> int:
+    """
+    Get the next agent version by incrementing the current version.
+    
+    Args:
+        current_agent_version: Current agent version number
+        
+    Returns:
+        Next agent version number
+    """
+    return current_agent_version + 1
+
+
+def set_project_version(version: str) -> str:
+    """
+    Set the project version manually. Validates the version format.
+    
+    Args:
+        version: Semantic version string (e.g., "1.0.0")
+        
+    Returns:
+        The validated version string
+        
+    Raises:
+        ValueError: If the version format is invalid
+    """
+    if not is_valid_version(version):
+        raise ValueError(f"Invalid semantic version format: {version}")
+    return version
+
+
+def get_latest_agent_version_for_function(prompts: dict, function_name: str) -> int:
+    """
+    Get the latest agent version for a specific function.
+    
+    Args:
+        prompts: Dictionary of prompt versions
+        function_name: Name of the function
+        
+    Returns:
+        Latest agent version number, or 0 if no versions exist
+    """
+    function_prompts = [pv for pv in prompts.values() if pv.function_name == function_name]
+    if not function_prompts:
+        return 0
+    return max(pv.agent_version for pv in function_prompts)
 
 
 def analyze_prompt_changes(old_prompt: str, new_prompt: str) -> str:
@@ -159,8 +209,8 @@ def _is_minor_change(old_prompt: str, new_prompt: str) -> bool:
     return False
 
 
-def bump_version(current_version: str, bump_type: str) -> str:
-    """Bump version based on the change type."""
+def bump_project_version(current_version: str, bump_type: str) -> str:
+    """Bump project version based on the change type."""
     major, minor, patch = parse_version_parts(current_version)
     
     if bump_type == 'major':
@@ -169,6 +219,57 @@ def bump_version(current_version: str, bump_type: str) -> str:
         return f"{major}.{minor + 1}.0"
     else:  # patch
         return f"{major}.{minor}.{patch + 1}"
+
+
+def create_versioned_prompt(
+    prompt: str,
+    function_name: str,
+    project_version: str,
+    prompts: dict,
+    description: Optional[str] = None,
+    tags: Optional[list] = None
+) -> 'PromptVersion':
+    """
+    Create a new versioned prompt with automatic agent version increment.
+    
+    Args:
+        prompt: The prompt text
+        function_name: Name of the function
+        project_version: Current project version (semantic version)
+        prompts: Dictionary of existing prompt versions
+        description: Optional description
+        tags: Optional tags
+        
+    Returns:
+        New PromptVersion instance
+    """
+    from .models import PromptVersion
+    
+    # Get the next agent version for this function
+    latest_agent_version = get_latest_agent_version_for_function(prompts, function_name)
+    next_agent_version = get_next_agent_version(latest_agent_version)
+    
+    return PromptVersion(
+        prompt=prompt,
+        project_version=project_version,
+        agent_version=next_agent_version,
+        function_name=function_name,
+        description=description,
+        tags=tags
+    )
+
+
+def bump_agent_version(current_agent_version: int) -> int:
+    """
+    Bump agent version by incrementing the current version.
+    
+    Args:
+        current_agent_version: Current agent version number
+        
+    Returns:
+        Next agent version number
+    """
+    return current_agent_version + 1
 
 
 def parse_version_parts(version: str) -> Tuple[int, int, int]:

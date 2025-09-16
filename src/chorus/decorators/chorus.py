@@ -8,58 +8,51 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from ..core import PromptVersion, PromptStorage, analyze_prompt_changes, bump_version, is_valid_version
+from ..core import (
+    PromptVersion, PromptStorage, analyze_prompt_changes, 
+    bump_project_version, is_valid_version, create_versioned_prompt
+)
 from ..utils import extract_prompt_from_function
 
 
 def chorus(
-    version: str,
+    project_version: str = None,
     description: Optional[str] = None,
     tags: Optional[List[str]] = None,
     auto_version: bool = True
 ):
     """
-    Decorator to track and version LLM prompts using Semantic Versioning (SemVer).
+    Decorator to track and version LLM prompts using dual versioning system.
     Automatically extracts the prompt from the function's docstring or comments.
     
-    Follows Semantic Versioning principles:
-    - MAJOR: Incompatible changes that break existing functionality
-    - MINOR: New functionality added in a backward compatible manner
-    - PATCH: Backward compatible bug fixes and small improvements
+    Dual Versioning System:
+    - Project Version: Semantic version for project changes (set manually)
+    - Agent Version: Incremental version for prompt changes (auto-incremented)
     
     Args:
-        version: Required version string following SemVer (e.g., "1.0.0", "1.0.0-alpha", "2.1.0+20231201") 
-                or "auto" for intelligent automatic versioning
+        project_version: Project version string (e.g., "1.0.0"). If None, uses project's current project version.
         description: Optional description of the prompt
         tags: Optional list of tags for categorization
-        auto_version: Whether to automatically increment version on changes
-    
-    Version Format Support:
-        - Basic: 1.0.0
-        - Pre-release: 1.0.0-alpha, 1.0.0-beta.1, 1.0.0-rc.2
-        - Build metadata: 1.0.0+20231201, 1.0.0-alpha+001
+        auto_version: Whether to automatically increment agent version on changes
     
     Example:
-        @chorus(version="1.0.0", description="Basic Q&A prompt")
+        @chorus(project_version="1.0.0", description="Basic Q&A prompt")
         def ask_question(question: str) -> str:
             \"\"\"
             You are a helpful assistant. Answer: {question}
             \"\"\"
             return "Answer: " + question
         
-        @chorus(version="auto", description="Auto-versioned prompt")
+        @chorus(description="Auto-versioned prompt")  # Uses project's project version
         def auto_versioned_function(text: str) -> str:
             \"\"\"
             Process this text: {text}
             \"\"\"
             return f"Processed: {text}"
     """
-    # Validate version parameter
-    if not version:
-        raise ValueError("Version parameter is required and cannot be empty")
-    
-    if version != "auto" and not is_valid_version(version):
-        raise ValueError(f"Invalid version format: {version}. Expected semantic version (e.g., '1.0.0') or 'auto'")
+    # Validate project_version parameter if provided
+    if project_version is not None and not is_valid_version(project_version):
+        raise ValueError(f"Invalid project version format: {project_version}. Expected semantic version (e.g., '1.0.0')")
     
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
@@ -96,28 +89,27 @@ def chorus(
             # Create storage and track the prompt
             storage = PromptStorage(source_filename=source_filename)
             
-            # Check if this is a new prompt or version
-            current_version = storage.get_latest_version(func.__name__)
-            
-            # Handle "auto" version option
-            if version == "auto":
-                if current_version:
-                    # Analyze changes to determine appropriate version bump
-                    bump_type = analyze_prompt_changes(current_version.prompt, formatted_prompt)
-                    new_version = bump_version(current_version.version, bump_type)
-                else:
-                    # Start with 1.0.0 for auto versioning
-                    new_version = "1.0.0"
-            elif current_version and auto_version:
-                # Check if prompt has changed
-                if current_version.prompt != formatted_prompt:
-                    # Analyze changes to determine appropriate version bump
-                    bump_type = analyze_prompt_changes(current_version.prompt, formatted_prompt)
-                    new_version = bump_version(current_version.version, bump_type)
-                else:
-                    new_version = current_version.version
+            # Get or set project version
+            if project_version is not None:
+                # Set the project version for this project
+                storage.set_project_version(project_version)
+                current_project_version = project_version
             else:
-                new_version = version
+                # Use existing project version or default to 1.0.0
+                current_project_version = storage.get_project_version()
+                if current_project_version is None:
+                    storage.set_project_version("1.0.0")
+                    current_project_version = "1.0.0"
+            
+            # Create versioned prompt using the new dual versioning system
+            prompt_version = create_versioned_prompt(
+                prompt=formatted_prompt,
+                function_name=func.__name__,
+                project_version=current_project_version,
+                prompts=storage.prompts,
+                description=description,
+                tags=tags
+            )
             
             # Execute the original function and capture output
             try:
@@ -131,17 +123,10 @@ def chorus(
                 # Re-raise the exception after logging
                 raise
             
-            # Create prompt version with execution data
-            prompt_version = PromptVersion(
-                prompt=formatted_prompt,
-                version=new_version,
-                function_name=func.__name__,
-                description=description,
-                tags=tags or [],
-                inputs=bound_args.arguments,
-                output=output,
-                execution_time=execution_time
-            )
+            # Update prompt version with execution data
+            prompt_version.inputs = bound_args.arguments
+            prompt_version.output = output
+            prompt_version.execution_time = execution_time
             
             # Store the prompt with execution data
             storage.add_prompt(prompt_version)
@@ -160,7 +145,7 @@ def chorus(
         
         # Store metadata on the wrapper
         wrapper._chorus_metadata = {
-            'version': version,
+            'project_version': project_version,
             'description': description,
             'tags': tags or [],
             'auto_version': auto_version

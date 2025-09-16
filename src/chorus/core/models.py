@@ -13,7 +13,8 @@ class PromptVersion:
     def __init__(
         self,
         prompt: str,
-        version: str,
+        system_version: str,
+        agent_version: int,
         function_name: str,
         description: Optional[str] = None,
         tags: Optional[List[str]] = None,
@@ -24,7 +25,8 @@ class PromptVersion:
         execution_id: Optional[str] = None
     ):
         self.prompt = prompt
-        self.version = version
+        self.system_version = system_version  # Semantic version for project/system
+        self.agent_version = agent_version    # Incremental version for prompt changes
         self.function_name = function_name
         self.description = description or ""
         self.tags = tags or []
@@ -37,11 +39,17 @@ class PromptVersion:
         self.execution_time = execution_time
         self.execution_id = execution_id or f"{self.created_at.strftime('%Y%m%d_%H%M%S')}_{self.prompt_hash}"
     
+    @property
+    def version(self) -> str:
+        """Get the combined version string for backward compatibility."""
+        return f"{self.system_version}.{self.agent_version}"
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for storage."""
         return {
             'prompt': self.prompt,
-            'version': self.version,
+            'system_version': self.system_version,
+            'agent_version': self.agent_version,
             'function_name': self.function_name,
             'description': self.description,
             'tags': self.tags,
@@ -56,9 +64,18 @@ class PromptVersion:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'PromptVersion':
         """Create from dictionary."""
+        # Handle backward compatibility for old version field
+        if 'version' in data and 'system_version' not in data:
+            system_version = data['version']
+            agent_version = 1  # Default agent version for backward compatibility
+        else:
+            system_version = data['system_version']
+            agent_version = data['agent_version']
+        
         return cls(
             prompt=data['prompt'],
-            version=data['version'],
+            system_version=system_version,
+            agent_version=agent_version,
             function_name=data['function_name'],
             description=data.get('description'),
             tags=data.get('tags', []),

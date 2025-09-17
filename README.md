@@ -15,7 +15,7 @@ A Python package for LLM prompt versioning and tracking with dual versioning sys
 ## Installation
 
 ```bash
-pip install chorus
+pip install prompt-chorus
 ```
 
 ## Quick Start
@@ -100,8 +100,8 @@ Chorus uses a dual versioning approach:
 ### Setup
 
 ```bash
-git clone https://github.com/yourusername/chorus.git
-cd chorus
+git clone https://github.com/ConsensusLabsAI/prompt-chorus.git
+cd src/prompt-chorus
 pip install -e .
 ```
 

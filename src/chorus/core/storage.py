@@ -158,7 +158,8 @@ class PromptStorage:
                         "timestamp": timestamp,
                         "created_at": data.get("created_at"),
                         "total_prompts": data.get("total_prompts"),
-                        "file_path": str(system_file)
+                        "file_path": str(system_file),
+                        "prompts": data.get("prompts", {})
                     })
             except (json.JSONDecodeError, KeyError):
                 continue

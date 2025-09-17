@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chorus Prompt Manager</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="app">
@@ -22,21 +22,18 @@
 
         <div class="stats">
             <div class="stat-card">
-                <h3 id="totalPrompts">0</h3>
-                <p>Total Prompts</p>
-            </div>
-            <div class="stat-card">
                 <h3 id="totalProjects">0</h3>
                 <p>Projects</p>
             </div>
             <div class="stat-card">
-                <h3 id="filteredResults">0</h3>
-                <p>Filtered Results</p>
+                <h3 id="totalPrompts">0</h3>
+                <p>Total Prompts</p>
             </div>
         </div>
 
         <div class="content">
-            <div class="project-list">
+            <!-- Projects View -->
+            <div id="projectsView" class="view">
                 <div id="loadingState" class="loading">
                     <div class="spinner"></div>
                     <p>Loading projects...</p>
@@ -44,40 +41,76 @@
                 <div id="errorState" class="error" style="display: none;">
                     <h2>Error loading projects</h2>
                     <p id="errorMessage"></p>
-                    <button onclick="fetchPrompts()" class="retry-btn">Try Again</button>
+                    <button onclick="fetchRuns()" class="retry-btn">Try Again</button>
                 </div>
                 <div id="emptyState" class="empty-state" style="display: none;">
                     <h3>No projects found</h3>
                     <p>No prompts with assigned projects found</p>
                 </div>
-                <div id="projectGrid"></div>
+                <div id="projectsGrid" class="projects-grid"></div>
             </div>
 
-            <div id="projectDetail" class="project-detail" style="display: none;">
-                <div class="detail-header">
-                    <h3 id="projectTitle"></h3>
-                    <button onclick="closeProjectDetail()" class="close-btn">×</button>
+            <!-- Versions View -->
+            <div id="versionsView" class="view" style="display: none;">
+                <div class="view-header">
+                    <button onclick="goBackToProjects()" class="back-btn">← Back to Projects</button>
+                    <h2 id="versionsProjectTitle">Project Versions</h2>
                 </div>
-                <div class="detail-content">
-                    <div class="project-stats">
-                        <div class="stat-item">
-                            <span class="stat-label">Total Agents:</span>
-                            <span id="totalAgents" class="stat-value">0</span>
+                <div id="versionsList" class="versions-list"></div>
+            </div>
+
+            <!-- Agents View -->
+            <div id="agentsView" class="view" style="display: none;">
+                <div class="view-header">
+                    <button onclick="goBackToVersions()" class="back-btn">← Back to Versions</button>
+                    <h2 id="agentsVersionTitle">Version Agents</h2>
+                </div>
+                <div id="agentsList" class="agents-list"></div>
+            </div>
+
+            <!-- Agent Details Sidebar -->
+            <div id="agentSidebar" class="agent-sidebar" style="display: none;">
+                <div class="sidebar-header">
+                    <h3 id="agentTitle">Agent Details</h3>
+                    <button onclick="closeAgentSidebar()" class="close-btn">×</button>
+                </div>
+                <div class="sidebar-content">
+                    <div class="agent-info">
+                        <div class="info-item">
+                            <span class="info-label">Agent Name:</span>
+                            <span id="agentName" class="info-value">-</span>
                         </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Latest Version:</span>
-                            <span id="latestVersion" class="stat-value">-</span>
+                        <div class="info-item">
+                            <span class="info-label">Version:</span>
+                            <span id="agentVersion" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Created:</span>
+                            <span id="agentCreated" class="info-value">-</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Execution Time:</span>
+                            <span id="agentExecutionTime" class="info-value">-</span>
                         </div>
                     </div>
-                    <div class="agents-section">
-                        <h4>Agents</h4>
-                        <div id="agentsList" class="agents-list"></div>
+                    <div class="prompt-section">
+                        <h4>Prompt</h4>
+                        <div id="agentPrompt" class="prompt-content"></div>
+                    </div>
+                    <div class="system-section">
+                        <h4>System</h4>
+                        <div id="agentSystem" class="system-content"></div>
+                    </div>
+                    <div class="execution-section">
+                        <h4>Execution Details</h4>
+                        <div id="agentInputs" class="execution-details"></div>
+                        <div id="agentOutput" class="execution-details"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=2"></script>
 </body>
 </html>

@@ -3,8 +3,8 @@ requires = ["setuptools>=45", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "htn"
-version = "0.1.0"
+name = "chorus"
+version = "0.1.1"
 description = "Chorus - LLM Prompt Versioning Tool"
 readme = "README.md"
 requires-python = ">=3.8"

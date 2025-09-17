@@ -2,7 +2,7 @@
 Chorus - A Python package for LLM prompt versioning and tracking.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "Maya Lekhi"
 __email__ = "maya@consensuslabs.ai"
 

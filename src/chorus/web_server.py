@@ -11,17 +11,7 @@ import threading
 import time
 
 from .core import PromptStorage
-
-
-# ANSI color codes
-class Colors:
-    RED = '\033[91m'
-    GREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    CYAN = '\033[96m'
-    BOLD = '\033[1m'
-    END = '\033[0m'
+from .utils.colors import Colors
 
 
 class ChorusHTTPRequestHandler(SimpleHTTPRequestHandler):

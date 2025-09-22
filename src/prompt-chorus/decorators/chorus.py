@@ -12,10 +12,24 @@ from ..core import (
     PromptVersion, PromptStorage, analyze_prompt_changes, 
     bump_project_version, is_valid_version, create_versioned_prompt
 )
-from ..utils import extract_prompt_from_function
+from ..utils import extract_prompt_from_messages_runtime, interceptor, _trace_context
+
+# Global storage manager to share storage instances by system name
+_storage_instances = {}
+
+def save_system_prompts(system_name: str) -> None:
+    """Save all prompts for a specific system."""
+    if system_name in _storage_instances:
+        _storage_instances[system_name].save_all_prompts()
+
+def save_all_system_prompts() -> None:
+    """Save all prompts for all systems."""
+    for storage in _storage_instances.values():
+        storage.save_all_prompts()
 
 
 def chorus(
+    system_name: str,
     project_version: str = None,
     description: Optional[str] = None,
     tags: Optional[List[str]] = None,
@@ -23,7 +37,7 @@ def chorus(
 ):
     """
     Decorator to track and version LLM prompts using dual versioning system.
-    Automatically extracts the prompt from the function's docstring or comments.
+    Automatically extracts the prompt from the messages variable in the function.
     
     Dual Versioning System:
     - Project Version: Semantic version for project changes (set manually)
@@ -34,21 +48,16 @@ def chorus(
         description: Optional description of the prompt
         tags: Optional list of tags for categorization
         auto_version: Whether to automatically increment agent version on changes
+        system_name: Optional system name. If None, uses the source filename.
     
     Example:
-        @chorus(project_version="1.0.0", description="Basic Q&A prompt")
+        @chorus(system_name="my_ai_system", project_version="1.0.0", description="Basic Q&A prompt")
         def ask_question(question: str) -> str:
-            \"\"\"
-            You are a helpful assistant. Answer: {question}
-            \"\"\"
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": f"Answer: {question}"}
+            ]
             return "Answer: " + question
-        
-        @chorus(description="Auto-versioned prompt")  # Uses project's project version
-        def auto_versioned_function(text: str) -> str:
-            \"\"\"
-            Process this text: {text}
-            \"\"\"
-            return f"Processed: {text}"
     """
     # Validate project_version parameter if provided
     if project_version is not None and not is_valid_version(project_version):
@@ -60,34 +69,39 @@ def chorus(
             # Start execution timing
             start_time = time.time()
             
-            # Extract prompt from function's docstring or comments
-            prompt = extract_prompt_from_function(func)
+            # Set up API interception and context
+            interceptor.start_interception()
+            context = {'api_calls': []}
+            token = _trace_context.set(context)
             
-            if not prompt:
-                print(f"Warning: No prompt found in function {func.__name__}")
-                return func(*args, **kwargs)
+            try:
+                # Execute the function (API calls will be intercepted)
+                result = func(*args, **kwargs)
+                
+                # Extract prompt from intercepted API calls
+                prompt = extract_prompt_from_messages_runtime(func, *args, **kwargs)
+                
+                if not prompt:
+                    print(f"Warning: No prompt found in function {func.__name__}")
+                    return result
+            finally:
+                # Clean up
+                _trace_context.reset(token)
+                interceptor.stop_interception()
             
             # Get function arguments for prompt formatting
             sig = inspect.signature(func)
             bound_args = sig.bind(*args, **kwargs)
             bound_args.apply_defaults()
             
-            # Format the prompt with function arguments
-            try:
-                formatted_prompt = prompt.format(**bound_args.arguments)
-            except KeyError:
-                # If prompt has placeholders not in function args, use original
-                formatted_prompt = prompt
+            # Use the intercepted prompt as-is (no formatting needed)
+            formatted_prompt = prompt
             
-            # Get source filename for better file naming
-            try:
-                source_file = inspect.getfile(func)
-                source_filename = Path(source_file).stem  # Get filename without extension
-            except (OSError, TypeError):
-                source_filename = "unknown"
-            
-            # Create storage and track the prompt
-            storage = PromptStorage(source_filename=source_filename)
+            # Use the provided system_name
+            # Get or create shared storage instance for this system
+            if system_name not in _storage_instances:
+                _storage_instances[system_name] = PromptStorage(source_filename=system_name)
+            storage = _storage_instances[system_name]
             
             # Get or set project version
             if project_version is not None:
@@ -111,22 +125,10 @@ def chorus(
                 tags=tags
             )
             
-            # Execute the original function and capture output
-            try:
-                output = func(*args, **kwargs)
-                execution_time = time.time() - start_time
-                execution_success = True
-            except Exception as e:
-                output = f"ERROR: {str(e)}"
-                execution_time = time.time() - start_time
-                execution_success = False
-                # Re-raise the exception after logging
-                raise
-            
             # Update prompt version with execution data
             prompt_version.inputs = bound_args.arguments
-            prompt_version.output = output
-            prompt_version.execution_time = execution_time
+            prompt_version.output = result
+            prompt_version.execution_time = time.time() - start_time
             
             # Store the prompt with execution data
             storage.add_prompt(prompt_version)
@@ -136,12 +138,12 @@ def chorus(
                 'prompt_version': prompt_version,
                 'original_prompt': prompt,
                 'formatted_prompt': formatted_prompt,
-                'execution_success': execution_success,
-                'execution_time': execution_time
+                'execution_success': True,
+                'execution_time': time.time() - start_time
             }
             
-            # Return the output
-            return output
+            # Return the result
+            return result
         
         # Store metadata on the wrapper
         wrapper._chorus_metadata = {

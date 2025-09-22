@@ -23,22 +23,8 @@ class PromptStorage:
         """Load prompts from storage - from system version files."""
         self.prompts = {}
         
-        # Load from the most recent system version file
-        system_files = self.list_system_files()
-        if system_files:
-            # Load from the most recent system file
-            latest_file = system_files[0]
-            try:
-                with open(latest_file, 'r') as f:
-                    data = json.load(f)
-                    # Handle new format with metadata
-                    if "prompts" in data:
-                        for k, v in data["prompts"].items():
-                            self.prompts[k] = PromptVersion.from_dict(v)
-                return  # Use the latest system file as the source of truth
-            except (json.JSONDecodeError, KeyError) as e:
-                print(f"Warning: Could not load latest file {latest_file}: {e}")
-                self.prompts = {}
+        # For each run, start fresh - don't load existing prompts
+        # This ensures each run creates its own file with only its prompts
     
     def _save_prompts(self) -> None:
         """Save prompts to storage in system_name_version_timestamp.json format."""
@@ -69,6 +55,10 @@ class PromptStorage:
         """Add a new prompt version."""
         key = f"{prompt_version.function_name}_{prompt_version.project_version}_{prompt_version.agent_version}"
         self.prompts[key] = prompt_version
+        # Don't save immediately - let the system save when done
+    
+    def save_all_prompts(self) -> None:
+        """Save all prompts to storage."""
         self._save_prompts()
     
     def get_prompt(self, function_name: str, project_version: str, agent_version: int) -> Optional[PromptVersion]:

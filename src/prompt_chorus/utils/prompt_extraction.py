@@ -105,8 +105,9 @@ class APIInterceptor:
             self.original_methods['google_generate_content'] = original_generate
             
             def intercepted_generate(self, contents, **kwargs):
-                prompt_data = self._extract_google_prompt(contents, kwargs)
-                self._store_api_call('google', prompt_data, kwargs)
+                # Use the global interceptor instance
+                prompt_data = interceptor._extract_google_prompt(contents, kwargs)
+                interceptor._store_api_call('google', prompt_data, kwargs)
                 return original_generate(self, contents, **kwargs)
             
             genai.GenerativeModel.generate_content = intercepted_generate
@@ -126,8 +127,9 @@ class APIInterceptor:
             self.original_methods['cohere_chat'] = original_chat
             
             def intercepted_chat(self, message, **kwargs):
-                prompt_data = self._extract_cohere_prompt(message, kwargs)
-                self._store_api_call('cohere', prompt_data, kwargs)
+                # Use the global interceptor instance
+                prompt_data = interceptor._extract_cohere_prompt(message, kwargs)
+                interceptor._store_api_call('cohere', prompt_data, kwargs)
                 return original_chat(self, message, **kwargs)
             
             cohere.Client.chat = intercepted_chat
@@ -160,8 +162,9 @@ class APIInterceptor:
             self.original_methods['langchain_llm_invoke'] = original_invoke
             
             def intercepted_invoke(self, input, **kwargs):
-                prompt_data = self._extract_langchain_prompt(input, kwargs)
-                self._store_api_call('langchain_llm', prompt_data, kwargs)
+                # Use the global interceptor instance
+                prompt_data = interceptor._extract_langchain_prompt(input, kwargs)
+                interceptor._store_api_call('langchain_llm', prompt_data, kwargs)
                 return original_invoke(self, input, **kwargs)
             
             LLM.invoke = intercepted_invoke
@@ -182,8 +185,9 @@ class APIInterceptor:
             self.original_methods['langchain_chat_invoke'] = original_invoke
             
             def intercepted_invoke(self, input, **kwargs):
-                prompt_data = self._extract_langchain_chat_prompt(input, kwargs)
-                self._store_api_call('langchain_chat', prompt_data, kwargs)
+                # Use the global interceptor instance
+                prompt_data = interceptor._extract_langchain_chat_prompt(input, kwargs)
+                interceptor._store_api_call('langchain_chat', prompt_data, kwargs)
                 return original_invoke(self, input, **kwargs)
             
             BaseChatModel.invoke = intercepted_invoke
@@ -204,8 +208,9 @@ class APIInterceptor:
             self.original_methods['langchain_chain_invoke'] = original_invoke
             
             def intercepted_invoke(self, input, **kwargs):
-                prompt_data = self._extract_langchain_chain_prompt(input, kwargs)
-                self._store_api_call('langchain_chain', prompt_data, kwargs)
+                # Use the global interceptor instance
+                prompt_data = interceptor._extract_langchain_chain_prompt(input, kwargs)
+                interceptor._store_api_call('langchain_chain', prompt_data, kwargs)
                 return original_invoke(self, input, **kwargs)
             
             Chain.invoke = intercepted_invoke

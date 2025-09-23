@@ -5,6 +5,7 @@ Main decorator for tracking and versioning LLM prompts.
 import functools
 import inspect
 import time
+import atexit
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
@@ -17,15 +18,14 @@ from ..utils import extract_prompt_from_messages_runtime, interceptor, _trace_co
 # Global storage manager to share storage instances by system name
 _storage_instances = {}
 
-def save_system_prompts(system_name: str) -> None:
-    """Save all prompts for a specific system."""
-    if system_name in _storage_instances:
-        _storage_instances[system_name].save_all_prompts()
-
-def save_all_system_prompts() -> None:
-    """Save all prompts for all systems."""
+def _auto_save_all_prompts():
+    """Automatically save all prompts when the script exits."""
     for storage in _storage_instances.values():
         storage.save_all_prompts()
+
+# Register the auto-save function to run on exit
+atexit.register(_auto_save_all_prompts)
+
 
 
 def chorus(

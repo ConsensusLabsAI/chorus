@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "prompt-chorus"
 version = "0.1.1"
-description = "Chorus - LLM Prompt Versioning Tool"
+description = "Chorus - LLM Prompt Versioning Tool with Dual Versioning System"
 readme = "README.md"
 requires-python = ">=3.8"
 license = "MIT"
 authors = [
     {name = "Maya Lekhi", email = "maya@consensuslabs.ai"},
 ]
-keywords = ["python", "package", "llm", "prompt", "versioning", "semver", "langgraph"]
+keywords = ["python", "package", "llm", "prompt", "versioning", "semver", "ai", "machine-learning", "prompt-engineering", "tracking"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -30,11 +30,11 @@ classifiers = [
 dependencies = []
 
 [project.scripts]
-chorus = "chorus.cli:main"
+chorus = "prompt_chorus.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["chorus*"]
+include = ["prompt_chorus*"]
 
 [project.optional-dependencies]
 dev = [
